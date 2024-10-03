@@ -1,0 +1,9 @@
+.channel-presentation {
+  margin-top: 60px;
+}
+
+.channel-image-presentation {
+  height: 270px;
+  width: 270px;
+  object-fit: contain;
+}
