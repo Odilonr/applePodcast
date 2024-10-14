@@ -10,7 +10,7 @@ export function renderPresentationEps() {
     const channelId = episode.channelId
     const matchingChannel = getPodcatChannel(channelId)
     podcastsHTML += `
-        <div class="main-podcast-episodes js-present-podcast-episode-${episode.id}"
+        <div class="hero-podcast js-present-podcast-episode-${episode.id}"
             data-audio-playing = "false"
             style = "background-color: ${backgroundColors[countBg]};">
               <div class="podcast-image-container">
@@ -64,7 +64,7 @@ export function renderPresentationEps() {
     countBg++
   })
 
-  document.querySelector('.js-home-top-podcasts').innerHTML = podcastsHTML
+  document.querySelector('.js-hero-podcasts').innerHTML = podcastsHTML
 
   const audioElement = document.querySelector('audio')
 
