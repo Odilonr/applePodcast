@@ -1,7 +1,6 @@
-import { API_URL } from "./config.js";
+import { API_URL } from "./utils/config.js";
 
 let accessToken
-let timeoutInt
 
 document.getElementById("header-signin-button").addEventListener("click", ()=> {
   document.querySelector('.authentication').classList.add('signing-in')
@@ -110,6 +109,7 @@ loginForm.addEventListener('submit', async (e) => {
     }
     const data = await response.json()
     setAccesToken(data.accessToken)
+    window.location.reload()
     document.querySelector('.authentication').classList.remove('signing-in')
     document.querySelector('header').classList.add('user-signed-in')
   } catch (err) {
@@ -155,9 +155,8 @@ async function logout () {
     }
 
     document.querySelector('header').classList.remove('user-signed-in')
-    clearInterval(timeoutInt)
     setAccesToken(null)
-    window.location.href = 'home.html'
+    window.location.reload()
   } catch (e) {
     console.log(e)
   }
