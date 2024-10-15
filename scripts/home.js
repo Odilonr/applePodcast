@@ -4,15 +4,11 @@ import { renderHeaderData } from "./header.js";
 import { fetchWithAuth, getAccessToken} from "./auth.js";
 
 const currentEpPlaying = {
-  episodeID:null,
-  currenTime:0
+  episodeID:null
 }
 
-/*new Promise((resolve) => {
-  setTimeout(()=> {
-    console.log(getAccessToken())
-  }, 2000)
-})*/
+let timeout
+
 
 const audio = document.querySelector('audio')
 
@@ -106,12 +102,16 @@ async function updatePlayBackTime(episodeID, currenTime) {
 }
 
 async function fetchaudioAndPlay (episodeID) {
-  let currentPlayBackTime
-  if(getAccessToken()) {
+  if (currentEpPlaying.episodeID) {
+    //update previously playing ep
+    await updatePlayBackTime(currentEpPlaying.episodeID, audio.currentTime)
+  }
+
+  let currentTime
+  if (getAccessToken()) {
     const playbackTimeObj = await fetchPlayback(episodeID)
-    console.log(playbackTimeObj)
-    currentPlayBackTime = playbackTimeObj.currentplaytime
-  } 
+    currentTime = playbackTimeObj.currentplaytime
+  }
 
   try {
     const response = await fetch(`${API_URL}/episodes/ep/${episodeID}`)
@@ -126,49 +126,54 @@ async function fetchaudioAndPlay (episodeID) {
     audio.setAttribute("controls", "")
     
     audio.addEventListener('loadedmetadata', ()=> {
-      handleEpStates(episodeID, currentPlayBackTime)
-      audio.currentTime = currentPlayBackTime ? currentPlayBackTime : 0
-      audio.play()
-      //renderHeaderData(episode, )
+      playAudio(episodeID, currentTime)
     })
   } catch (err) {
     console.log(err.message)
   }
 }
 
-async function pauseAudioAndSave (episodeID) {
+async function playAudio (episodeID, currentTime) {
+  if (currentEpPlaying.episodeID) {
+    document.querySelectorAll(`.js-episode-${currentEpPlaying.episodeID}`).forEach((element) => {
+      element.classList.remove('audio-playing')
+    })
+  }
+
+  audio.currentTime = currentTime ? currentTime : 0
+  audio.play()
+  currentEpPlaying.episodeID = episodeID
+  document.querySelectorAll(`.js-episode-${episodeID}`).forEach((element) => {
+    element.classList.add('audio-playing')
+  })
+  if (timeout) {
+    clearTimeout(timeout)
+  }
+
+  timeout = setInterval( async () => {
+    if (currentEpPlaying.episodeID) {
+      const updateMessage = await updatePlayBackTime(currentEpPlaying.episodeID, audio.currentTime)
+      console.log(updateMessage)
+    }
+  }, 5000)
+}
+
+
+async function pauseAudio (episodeID) {
   if (getAccessToken()) {
-    const updatePlayBack = await updatePlayBackTime(currentEpPlaying.episodeID, currentEpPlaying.currenTime)
+    await updatePlayBackTime(episodeID, audio.currentTime)
+  }
+
+  if (timeout) {
+    clearTimeout(timeout)
   }
 
   audio.pause()
-  const playingEpContainers = document.querySelectorAll(`.js-episode-${currentEpPlaying.episodeID}`)
+  const playingEpContainers = document.querySelectorAll(`.js-episode-${episodeID}`)
   playingEpContainers.forEach((element) => {
     element.classList.remove('audio-playing')
   })
   currentEpPlaying.episodeID = null
-  currentEpPlaying.currenTime = null
-}
-
-async function handleEpStates (episodeID, currenTime) {
-  const prevEpID = currentEpPlaying.episodeID
-
-  if (prevEpID) {
-    const updatePlayBack = await updatePlayBackTime(prevEpID, currenTime)
-    console.log(updatePlayBack)
-    const playingEpContainers = document.querySelectorAll(`.js-episode-${prevEpID}`)
-    playingEpContainers.forEach((element) => {
-      element.classList.remove('audio-playing')
-    })
-  } 
-
-  const pauseEpContainers = document.querySelectorAll(`.js-episode-${episodeID}`)
-  pauseEpContainers.forEach((element) => {
-    element.classList.add('audio-playing')
-  })
-
-  currentEpPlaying.episodeID = episodeID
-  currentEpPlaying.currenTime = currenTime
 }
 
 
@@ -353,7 +358,7 @@ function populateHomePage () {
       document.querySelectorAll('.js-pause-button').forEach((button) => [
         button.addEventListener('click', () => {
           const episodeID = button.dataset.episodeId
-          pauseAudioAndSave(episodeID)
+          pauseAudio(episodeID)
         })
       ])   
       
@@ -364,9 +369,6 @@ function populateHomePage () {
 populateHomePage()
 
 
-
-
-//fetchaudio('dc4341de-a5af-470c-a1be-c6ed2c8e6ecb')
 
 
 
