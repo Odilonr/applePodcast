@@ -225,7 +225,7 @@
 
 .exclamation-button, 
 .menu-button, 
-#profile-image {
+.profile-image-button {
   width:40px;
   height: 40px;
   display: flex;
@@ -258,9 +258,53 @@
   object-fit: contain;
 }
 
-#profile-image {
-  width: 50px;
-  height: 50px;
+
+.profile-image-button {
   display: none;
 }
+
+.user-signed-in .profile-image-button {
+  display: initial;
+}
+
+.user-signed-in .signin-button {
+  display: none;
+}
+
+.profile-tooltip {
+  position: absolute;
+  right: 45px;
+  top: 16px;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 4px;
+  border-color: rgba(236, 231, 231, 0.678);
+  padding: 0;
+  display: none;
+}
+
+
+.logout-button, 
+.profile-button {
+  border: none;
+  background-color: white;
+  width: 100%;
+  color: black;
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+  border-bottom-color: rgb(201, 197, 197);
+  font-size: 16px;
+  cursor: pointer;
+  padding:5px 90px 5px 5px;
+}
+
+.profile-tooltip button:hover {
+  background-color: rgb(224, 223, 223);
+}
+
+.logout-button {
+  color: red;
+  border: none;
+}
+
 

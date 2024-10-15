@@ -1,10 +1,18 @@
 import { API_URL } from "./config.js";
 import { formatDate, formatDuration } from "./utils/formatTime.js";
 import { renderHeaderData } from "./header.js";
+import { fetchWithAuth, getAccessToken} from "./auth.js";
 
 const currentEpPlaying = {
-  episodeID:null
+  episodeID:null,
+  currenTime:0
 }
+
+/*new Promise((resolve) => {
+  setTimeout(()=> {
+    console.log(getAccessToken())
+  }, 2000)
+})*/
 
 const audio = document.querySelector('audio')
 
@@ -45,7 +53,66 @@ async function fetchShows(type) {
   }
 }
 
+async function fetchPlayback(episodeID) {
+  try {
+    const accessToken = getAccessToken()
+    const response = await fetch(`${API_URL}/episodes/${episodeID}/timestamp`, {
+      method:'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      withCredentials: true, 
+      credentials: 'include'
+    })
+
+    if(!response.ok) {
+      throw new Error(`Status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (e) {
+    console.log(e.message)
+    return null
+  }
+}
+
+async function updatePlayBackTime(episodeID, currenTime) {
+  //const currenTime = audio.currentTime
+  try {
+    const accessToken = getAccessToken()
+    const response = await fetch(`${API_URL}/episodes/updatetime?episodeID=${episodeID}&new=${currenTime}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      withCredentials: true, 
+      credentials: 'include'
+    }
+    )
+
+    if(!response.ok) {
+      throw new Error(`Status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log(data)
+    return data
+  } catch (e) {
+    console.log(e.message)
+  }
+}
+
 async function fetchaudioAndPlay (episodeID) {
+  let currentPlayBackTime
+  if(getAccessToken()) {
+    const playbackTimeObj = await fetchPlayback(episodeID)
+    console.log(playbackTimeObj)
+    currentPlayBackTime = playbackTimeObj.currentplaytime
+  } 
+
   try {
     const response = await fetch(`${API_URL}/episodes/ep/${episodeID}`)
 
@@ -59,28 +126,37 @@ async function fetchaudioAndPlay (episodeID) {
     audio.setAttribute("controls", "")
     
     audio.addEventListener('loadedmetadata', ()=> {
-      //audio.currentTime = 2000
+      handleEpStates(episodeID, currentPlayBackTime)
+      audio.currentTime = currentPlayBackTime ? currentPlayBackTime : 0
       audio.play()
-      handleEpStates(episodeID)
-      renderHeaderData(episode, )
+      //renderHeaderData(episode, )
     })
   } catch (err) {
     console.log(err.message)
   }
 }
 
-function pauseAudioAndSave (episodeID) {
+async function pauseAudioAndSave (episodeID) {
+  if (getAccessToken()) {
+    const updatePlayBack = await updatePlayBackTime(currentEpPlaying.episodeID, currentEpPlaying.currenTime)
+  }
+
   audio.pause()
   const playingEpContainers = document.querySelectorAll(`.js-episode-${currentEpPlaying.episodeID}`)
   playingEpContainers.forEach((element) => {
     element.classList.remove('audio-playing')
   })
   currentEpPlaying.episodeID = null
+  currentEpPlaying.currenTime = null
 }
 
-function handleEpStates (episodeID) {
-  if (currentEpPlaying.episodeID) {
-    const playingEpContainers = document.querySelectorAll(`.js-episode-${currentEpPlaying.episodeID}`)
+async function handleEpStates (episodeID, currenTime) {
+  const prevEpID = currentEpPlaying.episodeID
+
+  if (prevEpID) {
+    const updatePlayBack = await updatePlayBackTime(prevEpID, currenTime)
+    console.log(updatePlayBack)
+    const playingEpContainers = document.querySelectorAll(`.js-episode-${prevEpID}`)
     playingEpContainers.forEach((element) => {
       element.classList.remove('audio-playing')
     })
@@ -90,7 +166,9 @@ function handleEpStates (episodeID) {
   pauseEpContainers.forEach((element) => {
     element.classList.add('audio-playing')
   })
+
   currentEpPlaying.episodeID = episodeID
+  currentEpPlaying.currenTime = currenTime
 }
 
 
@@ -133,7 +211,7 @@ function renderHeroEpisodes(episodes) {
                 </div>
                 <div class="pause-podcast-button-container">
                   <button class="pause-podcast-button js-pause-button"
-                  data-podcast-episode-id="${episode.id}">
+                  data-episode-id="${episode.id}">
                     <span>
                       <img src="images/icons/apple-pause-button.png"
                         class="pause-podcast-icon">
@@ -278,6 +356,7 @@ function populateHomePage () {
           pauseAudioAndSave(episodeID)
         })
       ])   
+      
     }
   )
 }

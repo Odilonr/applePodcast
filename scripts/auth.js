@@ -1,6 +1,7 @@
 import { API_URL } from "./config.js";
 
 let accessToken
+let timeoutInt
 
 document.getElementById("header-signin-button").addEventListener("click", ()=> {
   document.querySelector('.authentication').classList.add('signing-in')
@@ -27,10 +28,33 @@ document.querySelectorAll('.x-button').forEach((button) => {
   })
 })
 
-const signinForm = document.querySelector('.js-signup-form')
+document.querySelector('.profile-image-button').addEventListener("click", () => {
+  const tooltip = document.querySelector('.profile-tooltip')
+  tooltip.style = 'display:initial;'
+})
+
+window.addEventListener('click', (e)=>{
+  const tooltip = document.querySelector('.profile-tooltip')
+  const profileButton = document.querySelector('.profile-image-button')
+  if (!tooltip.contains(e.target) && e.target.parentElement !== profileButton) {
+    tooltip.style = 'display:none;'
+  }
+})
+
+function setAccesToken (token) {
+  accessToken = token
+}
+
+function getAccessToken () {
+  return accessToken
+}
+
+
+
+const signupForm = document.querySelector('.js-signup-form')
 const loginForm = document.querySelector('.js-login-form')
 
-signinForm.addEventListener('submit', async (e) => {
+signupForm.addEventListener('submit', async (e) => {
   e.preventDefault()
 
   const username = document.getElementById('new-username').value.trim()
@@ -85,16 +109,83 @@ loginForm.addEventListener('submit', async (e) => {
       throw new Error(`Error: ${response.status}`)
     }
     const data = await response.json()
-
-    accessToken = data.accessToken
-    console.log(accessToken)
-    const cookie = document.cookie
-    console.log(cookie)
-
+    setAccesToken(data.accessToken)
     document.querySelector('.authentication').classList.remove('signing-in')
+    document.querySelector('header').classList.add('user-signed-in')
   } catch (err) {
     console.log(err.message)
     alert('Registration Failed. Please check your credentials')
   }
-
 })
+
+async function refreshToken () {
+  try {
+    const response = await fetch(`${API_URL}/user/refresh`, {
+      method:'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      withCredentials: true, 
+      credentials: 'include'
+    })
+
+    if(!response.ok) {
+      throw new Error('Refresh Token failed')
+    }
+
+    const data = await response.json()
+    setAccesToken(data.accessToken)
+    document.querySelector('header').classList.add('user-signed-in')
+    return data.accessToken
+  } catch(err) {
+    console.log('User Logged out')
+  }
+}
+
+async function logout () {
+  try {
+    const response = await fetch(`${API_URL}/user/logout`, {
+      method:'POST', 
+      withCredentials:true,
+      credentials:'include'
+    })
+
+    if (!response.ok) {
+      throw new Error(`Try again, an error occured, ${response.status}`)
+    }
+
+    document.querySelector('header').classList.remove('user-signed-in')
+    clearInterval(timeoutInt)
+    setAccesToken(null)
+    window.location.href = 'home.html'
+  } catch (e) {
+    console.log(e)
+  }
+}
+
+document.querySelector('.logout-button').addEventListener("click", logout)
+
+
+async function fetchWithAuth() {
+  if (isAuthenticated()) {
+    
+  }
+}
+
+
+window.addEventListener("DOMContentLoaded", async ()=>{
+  try {
+    await refreshToken()
+    console.log('User Logged in')
+  } catch(e) {
+    console.log('User Logged Out')
+  }
+})
+
+
+export {fetchWithAuth, getAccessToken}
+
+
+
+
+
